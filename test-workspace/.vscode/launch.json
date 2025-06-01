@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "test_1",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--port",
+        "3000"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "test_2",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/",
+      "cwd": "${workspaceFolder}",
+      "args": [],
+      "env": {}
+    }
+  ]
+}
