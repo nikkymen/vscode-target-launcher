@@ -1,17 +1,50 @@
-[
-  {
-    "name": "test_1",
-    "target": "test_1",
-    "args": ["--port", "3000"],
-    "env": { "NODE_ENV": "development" }
+{
+  "debugger": {
+    "type": "lldb"
   },
-  {
-    "name": "test_2",
-    "target": "test_2"
-  }
-]
-
-// TODO: 
-// Добавить переменные и их подстановку
-// Добавить переключение между режимами запуска (под отладчиком или без)
-// Получать путь к бинарнику автоматически по имени cmake цели
+  "variables": {
+    "meta-storage-uri": "mongodb://localhost:27017",
+    "primary-storage-uri": "s3://my-bucket/storage"
+  },
+  "env": {
+    // Common environment
+  },
+  "targets": [
+    {
+      "name": "Group of targets",
+      "args": "--ip 127.0.0.1",
+      "targets_group": [
+        {
+          "id": "test_1",
+          "args": "--port 3000"
+        },
+        {
+          "id": "test_2",
+          "args": "--port 3001"
+        }
+      ]
+    },
+    {
+      "name": "test_1",
+      "id": "test_1",
+      "args": "--port 3000",
+      "env": {
+        "ENV_1": "1",
+        "ENV_2": "2"
+      }
+    },
+    {
+      "name": "test_2",
+      "id": "test_2"
+    },
+    {
+      "name": "test_2 group",
+      "id": "test_2",
+      "args": "--ip 127.0.0.1",
+      "args_group": [
+        "--port 3000",
+        "--port 3001"
+      ]
+    }
+  ]
+}

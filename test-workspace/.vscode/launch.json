@@ -1,6 +1,18 @@
 {
   "version": "0.2.0",
+  "variables": {
+    "port": 4065,
+    "workspaceRoot": "${workspaceRoot}"
+  },
   "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Launch",
+      "program": "/workspaces/vscode-cmake-launcher/test-workspace/build/debug/test_1",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
     {
       "name": "test_1",
       "type": "node",

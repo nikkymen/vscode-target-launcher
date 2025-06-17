@@ -1,28 +1,108 @@
 {
-  "name": "target-launcher",
-  "displayName": "target-launcher",
+  "name": "vscode-cmake-launcher",
+  "displayName": "vscode-cmake-launcher",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nikkymen/vscode-cmake-launcher"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Debuggers"
   ],
   "activationEvents": [
     "workspaceContains:.vscode/targets.json"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "configuration": {}
-  },
-  "dependencies": {
-    "jsonc-parser": "^3.2.0",
-    "vscode-cmake-tools": "^1.2.0"
+    "icon": "$(play)",
+    "configuration": {},
+    "views": {
+      "explorer": [
+        {
+          "id": "TargetsTreeView",
+          "name": "Run Targets",
+          "icon": "$(play)",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "targetsTreeView.run",
+        "title": "Run",
+        "icon": "$(play)"
+      },
+      {
+        "command": "targetsTreeView.debug",
+        "title": "Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "targetsTreeView.build",
+        "title": "Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "targetsTreeView.editRunConfiguration",
+        "title": "Edit",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "targetsTreeView.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "targetsTreeView.buildTarget",
+        "title": "Build",
+        "icon": "$(build)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "targetsTreeView.refresh",
+          "when": "view == TargetsTreeView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "targetsTreeView.run",
+          "when": "view == TargetsTreeView && viewItem == target",
+          "group": "inline"
+        },
+        {
+          "command": "targetsTreeView.run",
+          "when": "view == TargetsTreeView && viewItem == group",
+          "group": "inline"
+        },
+        {
+          "command": "targetsTreeView.editRunConfiguration",
+          "when": "view == TargetsTreeView && viewItem == config",
+          "group": "inline"
+        },
+        {
+          "command": "targetsTreeView.debug",
+          "when": "view == TargetsTreeView && viewItem == target",
+          "group": "inline"
+        },
+        {
+          "command": "targetsTreeView.buildTarget",
+          "when": "view == TargetsTreeView && viewItem == target",
+          "group": "1_modification"
+        }
+      ]
+    }
   },
   "extensionDependencies": [
-		"ms-vscode.cmake-tools"
-	],
+    "ms-vscode.cmake-tools"
+  ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -41,5 +121,9 @@
     "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.2.0",
+    "vscode-cmake-tools": "^1.2.0"
   }
 }

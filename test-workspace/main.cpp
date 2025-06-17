@@ -1,6 +1,8 @@
+#include <iostream>
+
 int main(void) 
 {
-    int t = 9;
+    std::cout << "Hello, World2!" << std::endl;
     
     return 0;
 }

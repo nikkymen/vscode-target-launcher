@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cmake",
+            "label": "CMake: build debug",
+            "command": "build",
+            "preset": "debug"
+        },
+        {
+            "type": "cmake",
+            "label": "CMake: build release",
+            "command": "build",
+            "preset": "release"
+        }
+    ]
+}
