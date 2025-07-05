@@ -1,10 +1,10 @@
 {
-  "name": "vscode-cmake-launcher",
-  "displayName": "vscode-cmake-launcher",
-  "description": "",
+  "name": "target-launcher",
+  "displayName": "Target Launcher",
+  "description": "View and quickly launch executable targets",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nikkymen/vscode-cmake-launcher"
+    "url": "https://github.com/nikkymen/vscode-target-launcher"
   },
   "version": "0.0.1",
   "engines": {
@@ -21,6 +21,38 @@
   "contributes": {
     "icon": "$(play)",
     "configuration": {},
+    "commands": [
+      {
+        "command": "targetsLauncher.run",
+        "title": "Run",
+        "icon": "$(play)"
+      },
+      {
+        "command": "targetsLauncher.debug",
+        "title": "Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "targetsLauncher.build",
+        "title": "Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "targetsLauncher.editRunConfiguration",
+        "title": "Edit",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "targetsLauncher.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "targetsLauncher.buildTarget",
+        "title": "Build",
+        "icon": "$(build)"
+      }
+    ],
     "views": {
       "explorer": [
         {
@@ -31,69 +63,37 @@
         }
       ]
     },
-    "commands": [
-      {
-        "command": "targetsTreeView.run",
-        "title": "Run",
-        "icon": "$(play)"
-      },
-      {
-        "command": "targetsTreeView.debug",
-        "title": "Debug",
-        "icon": "$(debug)"
-      },
-      {
-        "command": "targetsTreeView.build",
-        "title": "Debug",
-        "icon": "$(debug)"
-      },
-      {
-        "command": "targetsTreeView.editRunConfiguration",
-        "title": "Edit",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "targetsTreeView.refresh",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "targetsTreeView.buildTarget",
-        "title": "Build",
-        "icon": "$(build)"
-      }
-    ],
     "menus": {
       "view/title": [
         {
-          "command": "targetsTreeView.refresh",
+          "command": "targetsLauncher.refresh",
           "when": "view == TargetsTreeView",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "targetsTreeView.run",
+          "command": "targetsLauncher.run",
           "when": "view == TargetsTreeView && viewItem == target",
           "group": "inline"
         },
         {
-          "command": "targetsTreeView.run",
+          "command": "targetsLauncher.run",
           "when": "view == TargetsTreeView && viewItem == group",
           "group": "inline"
         },
         {
-          "command": "targetsTreeView.editRunConfiguration",
+          "command": "targetsLauncher.editRunConfiguration",
           "when": "view == TargetsTreeView && viewItem == config",
           "group": "inline"
         },
         {
-          "command": "targetsTreeView.debug",
+          "command": "targetsLauncher.debug",
           "when": "view == TargetsTreeView && viewItem == target",
           "group": "inline"
         },
         {
-          "command": "targetsTreeView.buildTarget",
+          "command": "targetsLauncher.buildTarget",
           "when": "view == TargetsTreeView && viewItem == target",
           "group": "1_modification"
         }

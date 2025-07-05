@@ -199,7 +199,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 async function setupCommands(context: vscode.ExtensionContext) {
 
-	vscode.commands.registerCommand('targetsTreeView.run', async (node: TargetNode) => {
+	vscode.commands.registerCommand('targetsLauncher.run', async (node: TargetNode) => {
 
 		try {
 			if (node.workspace && node instanceof TargetNode) {
@@ -244,7 +244,7 @@ async function setupCommands(context: vscode.ExtensionContext) {
 		}
 	});
 
-	vscode.commands.registerCommand('targetsTreeView.build', async (node: TargetNode) => {
+	vscode.commands.registerCommand('targetsLauncher.build', async (node: TargetNode) => {
 
 		try {
 			activeProject?.build();
@@ -266,7 +266,7 @@ async function setupStatusBar(context: vscode.ExtensionContext) {
 		let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 		statusBarItem.text = "$(rocket) Build";
 		statusBarItem.tooltip = "Build CMake project";
-		statusBarItem.command = 'targetsTreeView.build';
+		statusBarItem.command = 'targetsLauncher.build';
 		statusBarItem.name = "Targets (extension)";
 
 	//	await vscode.commands.executeCommand('cmake.build'))
