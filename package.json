@@ -1,5 +1,6 @@
 {
   "name": "target-launcher",
+  "preview": true,
   "displayName": "Target Launcher",
   "description": "View and quickly launch executable targets",
   "repository": {
@@ -18,9 +19,18 @@
     "workspaceContains:.vscode/targets.json"
   ],
   "main": "./out/extension.js",
+  "icon": "images/logo.png",
   "contributes": {
-    "icon": "$(play)",
-    "configuration": {},
+		"configuration": {
+			"title": "Targets Launcher",
+			"properties": {
+				"targetsLauncher.statusBarItemsPriority": {
+					"description": "Move status bar items left or right by adjusting the number priority.",
+					"type": "integer",
+					"default": -105
+				}
+			}
+		},
     "commands": [
       {
         "command": "targetsLauncher.run",
@@ -29,11 +39,6 @@
       },
       {
         "command": "targetsLauncher.debug",
-        "title": "Debug",
-        "icon": "$(debug)"
-      },
-      {
-        "command": "targetsLauncher.build",
         "title": "Debug",
         "icon": "$(debug)"
       },
@@ -48,9 +53,22 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "targetsLauncher.editTargets",
+        "title": "Edit",
+        "icon": "$(edit)"
+      },
+      {
         "command": "targetsLauncher.buildTarget",
         "title": "Build",
         "icon": "$(build)"
+      },
+      {
+        "command": "targetsLauncher.args",
+        "title": "Get Launch Arguments"
+      },
+      {
+        "command": "targetsLauncher.envFile",
+        "title": "Get Launch Environment File Path"
       }
     ],
     "views": {
@@ -66,7 +84,7 @@
     "menus": {
       "view/title": [
         {
-          "command": "targetsLauncher.refresh",
+          "command": "targetsLauncher.editTargets",
           "when": "view == TargetsTreeView",
           "group": "navigation"
         }

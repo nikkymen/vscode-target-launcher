@@ -1,60 +1,63 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as jsonc from 'jsonc-parser';
-import { CMakeToolsApi, CMakeToolsExtensionExports, CodeModel, ConfigurationType, Project, Version } from 'vscode-cmake-tools';
+import { CMakeToolsApi, CMakeToolsExtensionExports, CodeModel, ConfigurationType, Project, Version } from './cmake-api/api';
 import { TargetTreeProvider } from './targets-provider';
 import { TargetNode, TargetsModel, TreeNode } from './targets-model';
 import { TerminalManager } from './terminal-manager';
 
-const logger = vscode.window.createOutputChannel("target-launcher extension");
+const targetsChannel = vscode.window.createOutputChannel("Targets Launcher");
 
-let cmake_api: CMakeToolsApi;
+let targetsFileUri: vscode.Uri
+let extensionContext: vscode.ExtensionContext;
+let cmakeApi: CMakeToolsApi;
 let activeProject: Project | undefined;
 let targetsMap: Map<string, Map<string, string>> = new Map();
-let currentCMakeConfig: vscode.StatusBarItem;
 let terminalManager: TerminalManager;
 
 let targetsModel: TargetsModel;
 let targetsView: vscode.TreeView<TreeNode>;
 let targetsProvider: TargetTreeProvider;
 
+let currentTarget: TargetNode | undefined;
+
+let statusTargetItem: vscode.StatusBarItem;
+let statusArgsItem: vscode.StatusBarItem;
+
 // https://github.com/microsoft/vscode-cmake-tools-api/tree/main/sample-extension
 // https://github.com/arthurvaverko/launch-sidebar-extension
 // https://code.visualstudio.com/api/references/icons-in-labels#icon-listing
 
-function print(string: string, numTabs = 0): void {
-	// let value = "";
-	// for (let i = 0; i < numTabs; i++) {
-	// 	value += "\t";
-	// }
-	// logger.appendLine(`${value}${string}`);
-	// logger.show();
+function print(string: string, numTabs = 0): void
+{
+	let value = "";
+
+	for (let i = 0; i < numTabs; i++)
+		value += "\t";
+
+	targetsChannel.appendLine(`${value}${string}`);
+	//logger.show();
 }
 
-async function updateCMakeCodeModel(codemodel: CodeModel.Content): Promise<void> {
-
+async function updateCMakeCodeModel(codemodel: CodeModel.Content): Promise<void>
+{
 	// Collect executable targets
 
-	codemodel.configurations.forEach((configuration) => {
-
-		// Update toolbar label
-		currentCMakeConfig.text = configuration.name;
-
+	codemodel.configurations.forEach((configuration) =>
+	{
 		// Reset targets map
 
 		let map = new Map<string, string>();
 
-		configuration.projects.forEach((project) => {
-
-			if (project.targets) {
-
-				project.targets.forEach((target) => {
-					if (target.type === 'EXECUTABLE') {
+		configuration.projects.forEach((project) =>
+		{
+			if (project.targets)
+			{
+				project.targets.forEach((target) =>
+				{
+					if (target.type === 'EXECUTABLE')
+					{
 						// Get the first artifact path for executable targets
-						if (target.artifacts && target.artifacts.length > 0) {
+						if (target.artifacts && target.artifacts.length > 0)
 							map.set(target.name, target.artifacts[0]);
-						}
 					}
 				});
 			}
@@ -73,43 +76,51 @@ async function updateCMakeCodeModel(codemodel: CodeModel.Content): Promise<void>
 	// }
 }
 
-async function updateProjectModel(project: Project): Promise<void> {
-
+async function updateProjectModel(project: Project): Promise<void>
+{
 	const codemodel: CodeModel.Content | undefined = project.codeModel;
 
-	if (codemodel) {
+	if (codemodel)
 		updateCMakeCodeModel(codemodel);
-	}
 
 	const buildType = await project.getActiveBuildType();
 	print(`Active build type: ${buildType}`, 1);
 }
 
-async function updateCMakeProject(project: Project): Promise<void> {
-
+async function updateCMakeProject(project: Project): Promise<void>
+{
 	activeProject = project;
 
-	//let sd = activeProject.project._sourceDir;
+	//let presets = await (activeProject as any).project.presetsController.getAllBuildPresets();
+
+	//let driver = await (activeProject as any).project.getCMakeDriverInstance();
+	//let buildRunner = (driver as any).cmakeBuildRunner;
 
 	await updateProjectModel(activeProject);
 
 	// Subscribe on code model updates
 
-	activeProject.onCodeModelChanged(() => {
-		print("onCodeModelChanged received ");
-		if (activeProject && activeProject.codeModel) {
-			updateCMakeCodeModel(activeProject.codeModel);
-		}
-	});
+	{
+		const disposable = (activeProject as any).project.onReconfigured(() =>
+		{
+			print("onReconfigured received ");
+
+			if (activeProject && activeProject.codeModel)
+				updateCMakeCodeModel(activeProject.codeModel);
+		});
+
+		extensionContext.subscriptions.push(disposable);
+	}
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext)
+{
+	extensionContext = context;
 
 	// This method is called when your extension is activated
 
-	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length == 0)
 		return;
-	}
 
 	terminalManager = new TerminalManager();
 
@@ -117,39 +128,50 @@ export async function activate(context: vscode.ExtensionContext) {
 	targetsProvider = new TargetTreeProvider();
 
 	//Create tree view with options
-	targetsView = vscode.window.createTreeView('TargetsTreeView', {
+	targetsView = vscode.window.createTreeView('TargetsTreeView',
+	{
 		treeDataProvider: targetsProvider,
-		showCollapseAll: false,
+		showCollapseAll: true,
 		canSelectMany: false
+	});
+
+	targetsView.onDidChangeSelection((event) =>
+	{
+		if (event.selection.length == 0)
+			return;
+
+		const selectedNode = event.selection[0];
+
+		if (selectedNode instanceof TargetNode)
+		{
+			currentTarget = selectedNode;
+
+			updateCurrentTarget();
+		}
 	});
 
 	context.subscriptions.push(targetsView);
 
 	await setupCommands(context);
-	await setupStatusBar(context);
 
 	const cmakeToolsExtension: CMakeToolsExtensionExports = await vscode.extensions.getExtension('ms-vscode.cmake-tools')?.activate();
-	cmake_api = cmakeToolsExtension.getApi(Version.latest);
+	cmakeApi = cmakeToolsExtension.getApi(Version.latest);
 
-	const active_project = await cmake_api.getProject(vscode.Uri.file(cmake_api.getActiveFolderPath()));
+	const activeProject = await cmakeApi.getProject(vscode.Uri.file(cmakeApi.getActiveFolderPath()));
 
-	if (active_project) {
-		await updateCMakeProject(active_project);
-	}
+	if (activeProject)
+		await updateCMakeProject(activeProject);
 
 	// Subscribe on project changes
-	cmake_api.onActiveProjectChanged(async (projectUri) => {
-
-		print("onActiveProjectChanged received");
-
+	cmakeApi.onActiveProjectChanged(async (projectUri) =>
+	{
 		let proj;
-		if (projectUri) {
-			proj = await cmake_api.getProject(projectUri);
-		}
 
-		if (proj) {
+		if (projectUri)
+			proj = await cmakeApi.getProject(projectUri);
+
+		if (proj)
 			await updateCMakeProject(proj);
-		}
 	});
 
 	// For simplicity, watch only the first workspace folder
@@ -157,6 +179,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const workspaceFolder = vscode.workspace.workspaceFolders[0];
 	const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(workspaceFolder.uri, '.vscode/targets.json'));
+
+	targetsFileUri = vscode.Uri.joinPath(workspaceFolder.uri, '.vscode/targets.json')
 
 	// Subscribe on targets.json changes
 
@@ -169,144 +193,253 @@ export async function activate(context: vscode.ExtensionContext) {
 	targetsModel = new TargetsModel();
 	targetsProvider.setModel(targetsModel);
 
-	await updateTargetsModel(vscode.Uri.joinPath(workspaceFolder.uri, '.vscode/targets.json'), workspaceFolder);
+	await setupStatusBar(extensionContext);
 
-	// Update tree when workspace folders change
-	// context.subscriptions.push(
-	//   vscode.workspace.onDidChangeWorkspaceFolders(() => {
-	//     logInfo('Workspace folders changed, refreshing');
-	//     launchProvider.refresh();
-	//   })
-	// );
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	// console.log('Congratulations, your extension "target-launcher" is now active!');
-
-	// // The command has been defined in the package.json file
-	// // Now provide the implementation of the command with registerCommand
-	// // The commandId parameter must match the command field in package.json
-	// const disposable = vscode.commands.registerCommand('target-launcher.helloWorld', () => {
-	// 	// The code you place here will be executed every time your command is executed
-	// 	// Display a message box to the user
-	// 	vscode.window.showInformationMessage('Hello World from target-launcher!');
-	// });
-
-	// context.subscriptions.push(disposable);
-
-	// Push the watcher into subscriptions so it closes on deactivate:
+	await updateTargetsModel(targetsFileUri, workspaceFolder);
 }
 
-async function setupCommands(context: vscode.ExtensionContext) {
+async function updateCurrentTarget()
+{
+	if (!currentTarget)
+	{
+		statusTargetItem.hide();
+		statusArgsItem.hide();
 
-	vscode.commands.registerCommand('targetsLauncher.run', async (node: TargetNode) => {
+		return;
+	}
 
-		try {
-			if (node.workspace && node instanceof TargetNode) {
+	statusArgsItem.text = currentTarget.nodeArgs;
+	statusArgsItem.show();
 
-				// Какую конфигурацию запускать???
+	statusTargetItem.text = "$(play) " + currentTarget.name;
+	statusTargetItem.show();
+}
 
-				let configMap = targetsMap.get(currentCMakeConfig.text);
+async function setupCommands(context: vscode.ExtensionContext)
+{
+	{
+		const disposable = vscode.commands.registerCommand('targetsLauncher.editTargets', async () =>
+		{
+			const doc = await vscode.workspace.openTextDocument(targetsFileUri);
+			const editor = await vscode.window.showTextDocument(doc, { preview: false });
 
-				if (configMap) {
+			// Create a selection from the start to end positions
+			// const startPosition = new vscode.Position(item.position.startLine, item.position.startCharacter);
+			// const endPosition = new vscode.Position(item.position.endLine, item.position.endCharacter);
+			// const selection = new vscode.Selection(startPosition, startPosition);
 
-					let executablePath = configMap.get(node.id);
+			// // Set the selection and reveal the range in the editor
+			// editor.selection = selection;
+			// editor.revealRange(
+			// new vscode.Range(startPosition, endPosition),
+			// vscode.TextEditorRevealType.InCenter
+			// );
+		});
 
-					if (executablePath) {
+		context.subscriptions.push(disposable);
+	}
 
-						let options: vscode.TerminalOptions = {};
+	{
+		const disposable = vscode.commands.registerCommand('targetsLauncher.run', async (node: TargetNode) =>
+		{
+			if (node.workspace && node instanceof TargetNode)
+				runTarget(node);
+		});
 
-						// Добавить аргумент в имя терминала??
-						options.name = node.name;
-						options.iconPath = new vscode.ThemeIcon('circle-outline');
+		context.subscriptions.push(disposable);
+	}
 
-						let terminal: vscode.Terminal = terminalManager.getOrCreateTerminal(node, options);
 
-						terminal.sendText(executablePath);
-						terminal.show();
-					}
-				}
+	{
+		const disposable = vscode.commands.registerCommand('targetsLauncher.runCurrent', async () =>
+		{
+			if (currentTarget)
+				runTarget(currentTarget);
+		});
 
-				// Start debugging with the selected configuration
-				//await vscode.debug.startDebugging(item.workspace, item.configuration);
+		context.subscriptions.push(disposable);
+	}
 
-				// Add to recent items
-				///recentItemsManager.addRecentItem(item);
-				//launchConfigurationProvider.refresh();
+	{
+		// const disposable = vscode.commands.registerCommand(
+		// 	"targetsLauncher.editArg",
+		// 	async () =>
+		// 	{
+		// 		if (!currentTarget)
+		// 			return;
 
-				// Show notification
-				//vscode.window.showInformationMessage(`Launched debug configuration: ${item.name}`);
-			} else {
-				//vscode.window.showErrorMessage('Unable to launch configuration: No workspace folder found');
-			}
-		} catch (error) {
-			//vscode.window.showErrorMessage(`Failed to launch configuration: ${error}`);
+		// 		const newValue = await vscode.window.showInputBox(
+		// 		{
+		// 			value: currentTarget.nodeArgs,
+		// 			prompt: "Edit argument value",
+		// 			placeHolder: "Enter argument value",
+		// 		});
+
+		// 		if (newValue !== undefined)
+		// 		{
+		// 			currentTarget.nodeArgs = newValue;
+		// 			targetsProvider.refresh(); // Refresh the tree view
+		// 		}
+		// 	})
+
+		const disposable = vscode.commands.registerCommand("targetsLauncher.editArgsCurrent", async () =>
+		{
+			if (currentTarget)
+				editTargetArgsDialog(currentTarget)
+		})
+
+		context.subscriptions.push(disposable);
+	}
+
+	// {
+	// 	const disposable = vscode.commands.registerCommand('targetsLauncher.args', async () =>
+	// 	{
+	// 		//return "'--file=/home/user/my_file.txt' '--value=33'";
+	// 		//return "\"--file=/home/user/my_file.txt\"";
+	// 		//return "\"--file=/home/user/my file.txt\"";
+	// 		return "--file=/home/user/text_file.txt:--value=33";
+	// 	});
+
+	// 	context.subscriptions.push(disposable);
+	// }
+}
+
+async function runTarget(target: TargetNode)
+{
+	let executablePath = '';
+
+	if (target.launcher == 'cmake')
+	{
+		let configMap = targetsMap.get('Debug');
+
+		if (configMap)
+			executablePath = configMap.get(target.id) || '';
+	}
+	else if (target.launcher == 'command')
+	{
+		executablePath = target.id;
+	}
+
+	if (executablePath.length > 0)
+	{
+		let options: vscode.TerminalOptions = {};
+
+		// Добавить аргумент в имя терминала??
+		options.name = target.name;
+		options.iconPath = new vscode.ThemeIcon('circle-outline');
+
+		let terminal: vscode.Terminal = terminalManager.getTerminal(target, options);
+
+		// Build command with arguments
+		let command = executablePath;
+
+		// Add arguments if available
+		if (target.args && target.args.length > 0)
+		{
+			// Map each argument node to its string value and join with spaces
+			const argsString = target.args;
+
+			command = `${executablePath} ${argsString}`;
+		}
+
+		terminal.sendText(command);
+		terminal.show();
+	}
+}
+
+function editTargetArgsDialog(target: TargetNode)
+{
+	const inputBox = vscode.window.createInputBox();
+
+	inputBox.value = target.nodeArgs || '';
+	inputBox.prompt = "Edit argument value";
+	inputBox.placeholder = "Enter argument value";
+
+	// Add button to open launch.json
+	inputBox.buttons = [
+		{
+			iconPath: new vscode.ThemeIcon("json"),
+			tooltip: "Open launch.json"
+		}
+	];
+
+	// Handle button click to open launch.json
+	inputBox.onDidTriggerButton(async () =>
+	{
+		// Get the URI for launch.json
+		const launchJsonUri = vscode.Uri.joinPath(
+			vscode.workspace.workspaceFolders?.[0].uri || vscode.Uri.file(''),
+			'.vscode/launch.json'
+		);
+
+		try
+		{
+			const doc = await vscode.workspace.openTextDocument(launchJsonUri);
+			await vscode.window.showTextDocument(doc);
+		}
+		catch (error)
+		{
+			vscode.window.showErrorMessage('Could not open launch.json file.');
 		}
 	});
 
-	vscode.commands.registerCommand('targetsLauncher.build', async (node: TargetNode) => {
+	// Handle when user presses Enter
+	inputBox.onDidAccept(() =>
+	{
+		target.nodeArgs = inputBox.value;
+		targetsProvider.refresh();
+		inputBox.hide();
 
-		try {
-			activeProject?.build();
-		} catch (error) {
-			//vscode.window.showErrorMessage(`Failed to launch configuration: ${error}`);
-		}
+		updateCurrentTarget();
 	});
+
+	// Show the input box
+	inputBox.show();
 }
 
-async function setupStatusBar(context: vscode.ExtensionContext) {
+async function setupStatusBar(context: vscode.ExtensionContext)
+{
+	const extensionName = 'Targets (extension)';
+	const config = vscode.workspace.getConfiguration('targetsLauncher');
+	let priority = config.get('statusBarItemsPriority', -97);
 
 	{
-		// Create Build button
+		statusTargetItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority);
+		statusTargetItem.text = " "
+		statusTargetItem.name = extensionName;
+		statusTargetItem.command = "targetsLauncher.runCurrent";
 
-		//const cmd = {} as vscode.Command;
-		//cmd.command = 'targetsTreeView.build';
-	//	cmd.arguments = ["preset", "release"];
+		context.subscriptions.push(statusTargetItem);
 
-		let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-		statusBarItem.text = "$(rocket) Build";
-		statusBarItem.tooltip = "Build CMake project";
-		statusBarItem.command = 'targetsLauncher.build';
-		statusBarItem.name = "Targets (extension)";
-
-	//	await vscode.commands.executeCommand('cmake.build'))
-
-		statusBarItem.show();
-
-		context.subscriptions.push(statusBarItem);
+		priority--;
 	}
 
 	{
-		// Create status bar item
+		statusArgsItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority);
+		statusArgsItem.name = extensionName;
+		statusArgsItem.text = " "
+		statusArgsItem.command = "targetsLauncher.editArgsCurrent"
 
-		currentCMakeConfig = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-		currentCMakeConfig.tooltip = "Select CMake Configuration";
-		currentCMakeConfig.command = "cmake.selectConfigurePreset";
+		context.subscriptions.push(statusArgsItem);
 
-		currentCMakeConfig.show();
-
-		context.subscriptions.push(currentCMakeConfig);
-	}
-
-	{
-		// Create Run button
-
-		let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-		statusBarItem.text = "$(play)";
-		statusBarItem.tooltip = "Run";
-		//statusBarItem.command = "cmake.selectConfigurePreset";
-
-		statusBarItem.show();
-
-		context.subscriptions.push(statusBarItem);
+		priority--;
 	}
 }
 
-async function updateTargetsModel(targetsUri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder) {
-
+async function updateTargetsModel(targetsUri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder)
+{
 	await targetsModel.readTargetsModel(targetsUri, workspaceFolder);
 
 	targetsProvider.refresh();
+
+	if (targetsModel.firstTarget && (targetsView.selection.length == 0))
+	{
+		// Select first target in view
+
+		await targetsView.reveal(targetsModel.firstTarget, { select: true, focus: true });
+	}
+
+	updateCurrentTarget();
 }
 
 // This method is called when your extension is deactivated

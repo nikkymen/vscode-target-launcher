@@ -5,5 +5,18 @@
 		}
 	],
 	"settings": {
+		"cmake.options.advanced": {
+			"build": {
+				"statusBarVisibility": "hidden"
+			},
+			"launch": {
+				"statusBarVisibility": "hidden"
+			},
+			"debug": {
+				"statusBarVisibility": "hidden"
+			}
+		},
+		"cmake.configureOnOpen": false,
+		"cmake.configureOnEdit": false
 	}
 }

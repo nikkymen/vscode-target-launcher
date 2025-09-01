@@ -9,5 +9,33 @@
 	// Turn off tsc task auto detection since we have the necessary tasks as npm scripts
 	"typescript.tsc.autoDetect": "off",
 	"cmake.ignoreCMakeListsMissing": true,
-	"editor.inlineSuggest.enabled": false
+	"editor.inlineSuggest.enabled": false,
+	"clangd.arguments": [
+		"-log=error",
+		"-pretty",
+		"--query-driver=/usr/bin/g++",
+		"--clang-tidy=1",
+		"--background-index=1",
+		"--background-index-priority=normal",
+		"--all-scopes-completion=1",
+		"--completion-parse=auto",
+		"--completion-style=detailed",
+		"--debug-origin=0",
+		"--fallback-style=LLVM",
+		"--function-arg-placeholders=1",
+		"--header-insertion=never",
+		"--header-insertion-decorators=1",
+		"--import-insertions=0",
+		"--include-ineligible-results=0",
+		"--limit-references=1000",
+		"--limit-results=100",
+		"--ranking-model=decision_forest",
+		"--rename-file-limit=50",
+		"--malloc-trim=1",
+		"--parse-forwarding-functions=0",
+		"--pch-storage=memory",
+		"--use-dirty-headers=0"
+	],
+	"typescript.format.placeOpenBraceOnNewLineForControlBlocks": true,
+	"typescript.format.placeOpenBraceOnNewLineForFunctions": true
 }
